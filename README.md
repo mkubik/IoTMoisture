@@ -29,9 +29,7 @@ Useful links, downloads and install:
 
 There is a bunch of ESP8266 devices on AliExpress and Amazon. The ones that I got are these:
 
-![](./docs/images/IMG_20190804_103353.jpg =250x)
 <img src="./docs/images/IMG_20190804_103353.jpg" alt="drawing" style="width:250px;"/>
-![](./docs/images/IMG_20190804_103409.jpg =250x)
 <img src="./docs/images/IMG_20190804_103409.jpg" alt="drawing" style="width:250px;"/>
 
 You'll find 2 types with different UART chips, namely CH340 and CP2102. For my purposes, I came to the conclusion that it wouldn't really matter but as the CP2102 is newer, I picked that one, but the CH340 variants should work exactly the same.
@@ -40,21 +38,21 @@ You'll find 2 types with different UART chips, namely CH340 and CP2102. For my p
 
 There's no real number or abreviation od any identifiable ID for these. But as there's only 2 types of sensors, one type that's mainly back coated and the other that has holes in it and is mainly whitish or transparent. Those also have  a separated electronics board, while the capacitive ones mostly have their electronics on the sensor board itself.
 
-![](./docs/images/IMG_20190804_103430.jpg =250x)
-![](./docs/images/IMG_20190804_103439.jpg =250x)
+<img src="./docs/images/IMG_20190804_103430.jpg" alt="drawing" style="width:200px;"/>
+<img src="./docs/images/IMG_20190804_103439.jpg" alt="drawing" style="width:200px;"/>
 
 ### Wires
 
 You'll need one additional male-female patch cable for wiring that I had to bend to make if fit:
 
-![](./docs/images/IMG_20190804_103450.jpg =250x)
+<img src="./docs/images/IMG_20190804_103450.jpg" alt="drawing" style="width:200px;"/>
 
 Connecting the wires is dead-simple. The 3 connectors on the sensor are VCC (3.3 V input), GND (Ground, obviously) and AOUT (the humidity reading as a voltage)
 Looking at the board, there's at least 3 pin pairs that offer 3.3V and GND. I picked the ones that made it easy to connect the patch cable.
 
-![](./docs/images/IMG_20190804_103555.jpg =250x)
-![](./docs/images/IMG_20190804_103619.jpg =250x)
-![](./docs/images/IMG_20190804_103644.jpg =250x)
+<img src="./docs/images/IMG_20190804_103555.jpg" alt="drawing" style="width:200px;"/>
+<img src="./docs/images/IMG_20190804_103619.jpg" alt="drawing" style="width:200px;"/>
+<img src="./docs/images/IMG_20190804_103644.jpg" alt="drawing" style="width:200px;"/>
 
 ## Power
 
