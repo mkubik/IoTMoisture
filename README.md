@@ -65,11 +65,20 @@ There's a few improvements that you may want to look at:
 
 - SSL: Switch to ESP8266WebServerSecure. This requires a self signed certificate. Alternatively you run the device through a proxy as the SSL endpoint.
 - Persistence of the UUID: Persist the UUID so that it is stable across reboots
-- Encrypt wifi id/password: To avoid clear text passwordd
+- Encrypt wifi id/password: To avoid clear text password
+- Investigate "deep sleep": https://randomnerdtutorials.com/esp8266-deep-sleep-with-arduino-ide/
 
 ## Dashboard/KPI
 
 I used https://www.dasheroo.com. The downside is that you have to provide a certain JSON format for it to work. Another good choice would be freeboard.io, but there's a bunch of others out there.
 
+<img src="./docs/images/IMG_20190804_124235.jpg" alt="drawing" style="width:200px;"/>
 <img src="./docs/images/dasheroo.png" alt="drawing" style="width:200px;"/>
+
+
+## TODOs
+
+- Put everything in a waterproof box
+- Check power consumption (deep sleep)
+
 
