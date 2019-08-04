@@ -70,3 +70,6 @@ There's a few improvements that you may want to look at:
 ## Dashboard/KPI
 
 I used https://www.dasheroo.com. The downside is that you have to provide a certain JSON format for it to work. Another good choice would be freeboard.io, but there's a bunch of others out there.
+
+<img src="./docs/images/dasheroo.png" alt="drawing" style="width:200px;"/>
+
