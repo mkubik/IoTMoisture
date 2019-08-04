@@ -21,6 +21,7 @@ Useful links, downloads and install:
 - Arduino IDE: https://arduino.cc
 - ESP8266 Firmware generator:  https://nodemcu-build.com/
 - ESP8266 device support for Arduino IDE: http://arduino.esp8266.com/stable/package_esp8266com_index.json
+- Dasheroo: https://www.dasheroo.com/
 
 ## Hardware
 
@@ -29,7 +30,9 @@ Useful links, downloads and install:
 There is a bunch of ESP8266 devices on AliExpress and Amazon. The ones that I got are these:
 
 ![](./docs/images/IMG_20190804_103353.jpg =250x)
+<img src="./docs/images/IMG_20190804_103353.jpg" alt="drawing" style="width:250px;"/>
 ![](./docs/images/IMG_20190804_103409.jpg =250x)
+<img src="./docs/images/IMG_20190804_103409.jpg" alt="drawing" style="width:250px;"/>
 
 You'll find 2 types with different UART chips, namely CH340 and CP2102. For my purposes, I came to the conclusion that it wouldn't really matter but as the CP2102 is newer, I picked that one, but the CH340 variants should work exactly the same.
 
