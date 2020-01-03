@@ -1,0 +1,29 @@
+## Setup basics, K3s, ingress
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--tls-san mqtt.example.com" sh -s - --write-kubeconfig-mode 644 --no-deploy traefik
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/mandatory.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud-generic.yaml
+kubectl apply -f ingress-svc.yaml
+
+## Repos
+helm repo add jetstack https://charts.jetstack.io
+helm repo add stable https://kubernetes-charts.storage.googleapis.com/
+ 
+## letsencrypt prep
+kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.12/deploy/manifests/00-crds.yaml
+kubectl create ns cert-manager
+helm install letsencrypt jetstack/cert-manager --namespace cert-manager
+kubectl apply -f stagingissuer.yaml
+kubectl apply -f prodissuer.yaml
+
+# deploy yaml files:
+#  - grafana
+#  - mosquitto
+#  - influxdb
+#  - telegraf
+kubectl apply -f grafana-secrets.yaml
+helm install grafana stable/grafana -f grafana-values.yaml
+kubectl apply -f ingress.yaml
+kubectl apply -f mosquitto.yaml
+kubectl apply -f influxdb.yaml
+kubectl apply -f telegraf.yaml
+

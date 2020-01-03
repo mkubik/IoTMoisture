@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mosquitto-data
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-config
+data:
+  mosquitto.conf: |+
+    persistence true
+    persistence_location /mosquitto/data/
+    log_type all
+    log_dest file /mosquitto/log/mosquitto.log
+    allow_anonymous false
+    password_file /mosquitto/config/pw.txt
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-passwd
+data:
+  pw.txt: |+
+    user:<password>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto
+  labels: 
+    app: mosquitto
+spec:
+  type: NodePort
+  ports:
+  - port: 1883
+    targetPort: 1883
+    name: mqtt
+  - port: 9001
+    targetPort: 9001
+    name: web
+  selector:
+    app: mosquitto
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+spec:
+  selector:
+    matchLabels:
+      app: mosquitto
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      containers:
+      - name: mosquitto
+        image: eclipse-mosquitto
+        ports:
+        - containerPort: 1883
+          name: mqtt
+        - containerPort: 9001
+          name: web
+        volumeMounts:
+          - mountPath: /mosquitto
+            name: mosquitto-data
+          - mountPath: /mosquitto/config/mosquitto.conf
+            name: mosquitto-config
+            subPath: mosquitto.conf
+            readOnly: true
+          - mountPath: /mosquitto/config/pw.txt
+            name: mosquitto-passwd
+            subPath: pw.txt
+            readOnly: true
+      volumes:
+      - name: mosquitto-data
+        persistentVolumeClaim:
+          claimName: mosquitto-data
+      - name: mosquitto-config
+        configMap:
+          name: mosquitto-config
+      - name: mosquitto-passwd
+        configMap:
+          name: mosquitto-passwd
+
