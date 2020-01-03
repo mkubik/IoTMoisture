@@ -15,13 +15,20 @@ Pretty quickly you stumble across pretty cheap devices (approx 2€ at time of w
 
 The choice of moisture sensors is also more than reasonable, there's only 2 types, one that has some rust problem over time and one that is capacitive. This adds 0.5€ more to the bill per device.
 
+The whole solution is based on a kubernetes cluster. You should actually be able to pick any cloud provider and get a k8s cluster from there, however, I decided to get a local copy of [K3s](https://k3s.io).
+The ESP8266 connects to a WiFi network and communicates to an [MQTT server](htps://mosquitto.org). The data is sent to an [InfluxDB](https;//wwww.influxdata.com) using their[Telegraf plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/mqtt_consumer). Once the data is in the InfluxDB, you can display the KPI's using [Grafana](https://grafana.com/) which I chose to install via helm.
+
+Overall architecture
+
+![Architecture](./docs/images/architecture.svg)
+
+
 ## Prerequisites
 
 Useful links, downloads and install:
 - Arduino IDE: https://arduino.cc
 - ESP8266 Firmware generator:  https://nodemcu-build.com/
 - ESP8266 device support for Arduino IDE: http://arduino.esp8266.com/stable/package_esp8266com_index.json
-- Dasheroo: https://www.dasheroo.com/
 
 ## Hardware
 
@@ -54,26 +61,37 @@ Looking at the board, there's at least 3 pin pairs that offer 3.3V and GND. I pi
 <img src="./docs/images/IMG_20190804_103619.jpg" alt="drawing" style="width:200px;"/>
 <img src="./docs/images/IMG_20190804_103644.jpg" alt="drawing" style="width:200px;"/>
 
+In order to save power and as moisture will not drop in milliseconds, it's sufficient to get readings every now and then. My impression is that 15min is way more than really required. You can play with it so it works best for you. 
+
+I also use the *deepSleep* mode of the ESP8266, so it only consumes relevant power ever 15 min for a few seconds. This should make the battery last quite some time.
+
+Note: deepSleep mode requires an additional wire from pin D0 to RST. This is required as the timer will reset the device. Note also, that for programming, you want to disconnect the wire.
+
 ## Power
 
-I intend to power the devices with a CR2032 There's a nice battery holder named "CR2032 Button Coin Cell Battery Socket Holder Case" which didn't arrive yet, I'll update this with pictures once they are delivered.
+I intend to power the devices with a 9V battery using a standard connector that needs to be soldered (or otherwise connected) to *Vin* and *GND*
+
+<img src="./docs/images/IMG_20200102_205639.jpg" alt="9V connector" style="width:200px;"/>
 
 
-## Code improvements
+## References
 
-There's a few improvements that you may want to look at:
+There's a few things that you may want to look at in more depth:
 
-- SSL: Switch to ESP8266WebServerSecure. This requires a self signed certificate. Alternatively you run the device through a proxy as the SSL endpoint.
-- Persistence of the UUID: Persist the UUID so that it is stable across reboots
-- Encrypt wifi id/password: To avoid clear text password
 - Investigate "deep sleep": https://randomnerdtutorials.com/esp8266-deep-sleep-with-arduino-ide/
 
-## Dashboard/KPI
+## Deployment
 
-I used https://www.dasheroo.com. The downside is that you have to provide a certain JSON format for it to work. Another good choice would be freeboard.io, but there's a bunch of others out there.
+<todo>
 
-<img src="./docs/images/IMG_20190804_124235.jpg" alt="drawing" style="width:200px;"/>
-<img src="./docs/images/dasheroo.png" alt="drawing" style="width:200px;"/>
+<img src="./docs/images/IMG_20190804_124235.jpg" alt="pic" style="width:200px;"/>
+
+
+## Monitoring
+
+As outlined above, I decided to use _Grafana_ for monitoring. I added the properties for my dashboard.
+
+<img src="./docs/images/grafana.png" alt="grafana" style="width:800px;"/>
 
 
 ## TODOs
