@@ -1,71 +1,161 @@
-/******************************************************************
- * Matthias Kubik
- * See project details at https://github.com/mkubik/IoTMoisture
- * 
- * 
- * MIT License
- * 
- * Copyright (c) 2019 mkubik
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- ******************************************************************/
-#include <stdio.h>
-#include <ESP8266WebServer.h>
+/**
+   An example showing how to put ESP8266 into Deep-sleep mode
+*/
+
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include <ESP8266TrueRandom.h>
+#include <ArduinoUniqueID.h>
+#include <ezTime.h>
 
-#define HTTP_PORT 80
+// Variables - please change as needed
+// ************************************************
+#define WIFISID "mySID"
+#define WIFIPW "myWIFIpw"
+#define MQ_KEY "key"
+#define MQ_SECRET "secret"
+#define MQ_SRV "mqtt.example.com"
+#define SLEEP_TIME 9e8
+// ************************************************
 
+// WiFi credentials.
+const char* WIFI_SSID = WIFISID;
+const char* WIFI_PASS = WIFIPW;
 
+// MQTT information.
+char* MQTT_DEVICE_ID;
+const char* MQTT_ACCESS_KEY = MQ_KEY;
+const char* MQTT_ACCESS_SECRET = MQ_SECRET;
+const char* MQTT_SERVER = MQ_SRV;
+const int   MQTT_SERVER_PORT = 1883;
+const char* MQTT_TOPIC = "iot/sensors";
+
+// Sensor data
 int sensorValue = 0;  // value read from the pot
 int outputValue = 0;  // value to output to a PWM pin
-byte uuidNumber[16]; // UUIDs in binary form are 16 bytes long
-String uuidStr;
+const int analogInPin = A0;  // ESP8266 Analog Pin ADC0 = A0
 
-const int A0Pin = A0;  // ESP8266 Analog Pin ADC0 = A0
-const char* ssid = "<your SSID>";
-const char* passwd = "<your wifi password>";
 
-ESP8266WebServer http_server(HTTP_PORT);
+WiFiClient wifiClient;
 
-int start_wifi() {
-  int retries = 0;
+PubSubClient client(wifiClient);
 
-  Serial.println("Connecting to WiFi AP..........");
+void connect() {
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, passwd);
-  // check the status of WiFi connection to be WL_CONNECTED
-  while ((WiFi.status() != WL_CONNECTED) && (retries < 20)) {
-    retries++;
-    delay(1000);
-    Serial.print(".");
-  }
+  // Connect to Wifi.
   Serial.println();
-  return WiFi.status(); // return the WiFi connection status
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(WIFI_SSID);
+
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+  // WiFi fix: https://github.com/esp8266/Arduino/issues/2186
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_OFF);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+  unsigned long wifiConnectStart = millis();
+
+  while (WiFi.status() != WL_CONNECTED) {
+    // Check to see if
+    if (WiFi.status() == WL_CONNECT_FAILED) {
+      Serial.println("Failed to connect to WiFi. Please verify credentials: ");
+      delay(10000);
+    }
+
+    delay(500);
+    Serial.println("...");
+    // Only try for 5 seconds.
+    if (millis() - wifiConnectStart > 15000) {
+      Serial.println("Failed to connect to WiFi");
+      return;
+    }
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  Serial.println();
+  Serial.print("Connecting to MQTT...");
+  client.setServer(MQTT_SERVER, MQTT_SERVER_PORT);
+
+  while (!!!client.connected()) {
+    Serial.print("Reconnecting client to ");
+    Serial.print(MQTT_SERVER);
+    Serial.print(" with DeviceID: ");
+    Serial.println(MQTT_DEVICE_ID);
+    while (!!!client.connect(MQTT_DEVICE_ID, MQTT_ACCESS_KEY, MQTT_ACCESS_SECRET)) {
+      Serial.print(".");
+      delay(2000);
+    }
+    Serial.println();
+  }
+
+  Serial.println("Connected!");
+  Serial.println("This device is now ready for use!");
 }
 
-void get_moisture() {
+// For debug purposes or any other means
+String getJSONPayload() {
+  String payload = "{ \"sensor\": \"";
+  payload += (char *)MQTT_DEVICE_ID;
+  payload +="\". \"time\": \"";
+  payload += UTC.dateTime(ISO8601);
+  payload += "\", \"raw\": \"";
+  payload += getMoisture();
+  payload += "\", \"mapped \": \"";
+  payload += outputValue;
+  payload += "\"}";
+  return payload;
+}
+
+String getInfluxPayload() {
+  int moist = getMoisture();
+  String payload = "moisture,sensor=";
+  payload += (char *)MQTT_DEVICE_ID;
+  payload += " humidity=";
+  payload += outputValue;
+  payload += ",rawdata=";
+  payload += moist;
+  payload += "";
+  return payload;
+}
+
+void sendSensorData() {
+  String payload = getInfluxPayload(); //getJSONPayload();
+  
+  Serial.print("Sending payload: ");
+  Serial.println(payload);
+
+  if (client.publish(MQTT_TOPIC, (char *)payload.c_str())) {
+    Serial.println("Publish ok");
+    client.disconnect();
+  } else {
+    Serial.println("Publish failed");
+    if (!!!client.connected()) {
+      Serial.print("Reconnecting client to ");
+      Serial.println(MQTT_SERVER);
+      while (!!!client.connect(MQTT_DEVICE_ID, MQTT_ACCESS_KEY, MQTT_ACCESS_SECRET)) {
+        Serial.print(".");
+        delay(2000);
+      }
+      Serial.println();
+    }
+  }
+}
+
+int getMoisture() {
 
   // read the analog in value
-  sensorValue = analogRead(A0Pin);
+  sensorValue = analogRead(analogInPin);
   
-  // moisture sensor reads approx 370 in a glass of water and abt. 800 in dry. We map these values to approx. 0-100% humidity.
+  // map it to the range of the PWM out
+  // moisture sensor reads approx 370 in a glass of water and abt. 800 in dry. We map these values to 0-100% humidity.
   outputValue = map(sensorValue, 370, 805, 100, 0);
   
   // print the readings in the Serial Monitor
@@ -74,61 +164,45 @@ void get_moisture() {
   Serial.print("\t output = ");
   Serial.println(outputValue);
 
-  // return a Dasheroo compatible JSON document. See https://www.dasheroo.com
-  // If you use some other KPI dashboard, you may need to change the return document.
-  StaticJsonDocument<512> doc;
-  char buf[512];
-  StaticJsonDocument<127> sensor;
-  sensor["type"] = "integer";
-  sensor["strategy"] = "continous";
-  sensor["value"] = sensorValue;
-  sensor["label"] = uuidStr;
-  sensor["order"] = 0;
-  StaticJsonDocument<127> moisture;
-  moisture["type"] = "integer";
-  moisture["strategy"] = "continous";
-  moisture["value"] = outputValue;
-  moisture["label"] = uuidStr;
-  moisture["order"] = 1;
-  doc["sensor"] = sensor;
-  doc["moisture"] = moisture;
-  serializeJsonPretty(doc, buf);
-  http_server.send(200, "application/json", buf);
-}
-
-void init_server_routing() {
-    http_server.on("/", HTTP_GET, []() {
-        http_server.send(200, "text/html", "IoT Moisture Sensor Server\n");
-    });
-    http_server.on("/moisture", HTTP_GET, get_moisture);
+  return(sensorValue);
 }
 
 void setup() {
-  // initialize serial communication at 115200
+
+  // Nasty way to get a string representation of the MAC address.
+  // Is there a more elegant way?
+  
+  char macStr[20], idStr[20];
+  WiFi.macAddress().toCharArray(macStr, 20);
+  sprintf(idStr, "ESP-%s", macStr);
+  MQTT_DEVICE_ID = idStr;
+
   Serial.begin(115200);
-  if (start_wifi() == WL_CONNECTED) {
-    Serial.print("Connected to ");
-    Serial.print(ssid);
-    Serial.print(" with IP: ");
-    Serial.println(WiFi.localIP());
-  }
-  else {
-    Serial.print("Error connecting to: ");
-    Serial.println(ssid);
-  }
-  // Generate a UUID for unique identification
-  // Note that this is re-generated on each reboot/reset.
-  // It is just intended to be able to distinguish if you have more of those sensors
-  ESP8266TrueRandom.uuid(uuidNumber);
-  uuidStr = ESP8266TrueRandom.uuidToString(uuidNumber);
-  Serial.print("UUID: ");
-  Serial.println(uuidStr);
+  Serial.setTimeout(2000);
 
-  init_server_routing();
-  http_server.begin();
+  // Wait for serial to initialize.
+  while (!Serial) { }
 
+  Serial.println("Moisture Sensor Device Started");
+  Serial.println(MQTT_DEVICE_ID);
+  Serial.println("-------------------------------------");
+  Serial.println("Deep-Sleep Mode");
+  Serial.println(" ------------------------------------");
+
+  connect();
+  Serial.println("Wating for time sync");
+  waitForSync(60); // wait for time sync
+
+  sendSensorData();
+  long sleepTime = SLEEP_TIME;
+  if(sleepTime > ESP.deepSleepMax())
+    sleepTime = 9e8;
+
+  Serial.print("Going into deep sleep for ");
+  Serial.print(sleepTime);
+  Serial.println(" micoseconds");
+  ESP.deepSleep(sleepTime); // 20e6 is 20 seconds, 36e9 is 1hr
 }
 
 void loop() {
-  http_server.handleClient();
 }
